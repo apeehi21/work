@@ -43,6 +43,9 @@ export default function App() {
   // Scene 4: Snapchat
   const [snapchatOption, setSnapchatOption] = useState<string>('');
   const [snapchatIdInput, setSnapchatIdInput] = useState<string>('');
+  const [snapchatFollowUpAnswer, setSnapchatFollowUpAnswer] = useState<string>('');
+  const [snapNoPosition, setSnapNoPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [snapNoAttempts, setSnapNoAttempts] = useState<number>(0);
 
   // Scene 6: Memory
   const [memoryOption, setMemoryOption] = useState<string>('');
@@ -53,6 +56,8 @@ export default function App() {
 
   // Scene 8: Final Proposal
   const [finalProposalAnswer, setFinalProposalAnswer] = useState<'YES' | 'NO' | null>(null);
+  const [noPosition, setNoPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [noAttempts, setNoAttempts] = useState<number>(0);
 
   // Admin in-memory authentication state (STRICT: not in localStorage / sessionStorage)
   const [adminToken, setAdminToken] = useState<string | null>(null);
@@ -71,9 +76,9 @@ export default function App() {
   // Browser Back button guard for Admin Privacy
   useEffect(() => {
     const handlePopState = () => {
-      // If user tries to use browser back button into admin dashboard without token, redirect immediately
-      if (currentView === 'admin-dashboard' && !adminToken) {
-        setCurrentView('admin-login');
+      if (currentView === 'admin-dashboard') {
+        handleAdminLogout();
+        setCurrentView('experience');
       }
     };
     window.addEventListener('popstate', handlePopState);
@@ -92,10 +97,15 @@ export default function App() {
     setNameError(null);
     setSnapchatOption('');
     setSnapchatIdInput('');
+    setSnapchatFollowUpAnswer('');
+    setSnapNoPosition({ x: 0, y: 0 });
+    setSnapNoAttempts(0);
     setMemoryOption('');
     setMemoryFollowUpInput('');
     setPersonalMessageInput('');
     setFinalProposalAnswer(null);
+    setNoPosition({ x: 0, y: 0 });
+    setNoAttempts(0);
 
     // 3. Return to Scene 1 — Name Entry
     setScene(1);
@@ -140,11 +150,22 @@ export default function App() {
     if (!snapchatOption) return;
     setIsSaving(true);
 
+    let submittedId: string | null = null;
+    let recordedAnswer = snapchatOption;
+
+    if (snapchatOption === 'Haan, bana li hai! 👻') {
+      submittedId = snapchatIdInput.trim() || null;
+    } else if (snapchatOption === 'Main nahi bana rahi hoon! 🙅‍♀️') {
+      recordedAnswer = `${snapchatOption} (Follow-up: ${snapchatFollowUpAnswer || 'Maan gayi!'})`;
+    } else if (snapchatOption === 'Abhi nahi banayi hai, par bana lungi 😊') {
+      recordedAnswer = `${snapchatOption} (Kab banaogi: ${snapchatFollowUpAnswer.trim() || 'Jaldi hi!'})`;
+    }
+
     try {
       await updateVisitorStep(visitorId, {
         visitorName,
-        snapchatAnswer: snapchatOption,
-        snapchatId: snapchatOption.includes('Nahi') ? null : (snapchatIdInput.trim() || null)
+        snapchatAnswer: recordedAnswer,
+        snapchatId: submittedId
       });
     } catch (err) {
       console.error('Error saving Snapchat answer:', err);
@@ -222,6 +243,54 @@ export default function App() {
     }
   };
 
+  // Playful dodging jump for the Snapchat NO button
+  const handleSnapNoDodge = (e?: React.MouseEvent | React.TouchEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const maxX = 120;
+    const maxY = 65;
+    const newX = (Math.random() > 0.5 ? 1 : -1) * (Math.random() * (maxX - 30) + 30);
+    const newY = (Math.random() > 0.5 ? 1 : -1) * (Math.random() * (maxY - 20) + 20);
+    setSnapNoPosition({ x: newX, y: newY });
+    setSnapNoAttempts(prev => prev + 1);
+  };
+
+  const snapPlayfulTexts = [
+    'Nahi! 😜',
+    'Bilkul nahi! 😂',
+    'Pakad ke dikhao! 🏃‍♂️',
+    'Nahi banaungi! 🙈',
+    'Na baba na! 🤪',
+    'Haan bolna padega! ❤️'
+  ];
+
+  // Playful dodging jump for the NO button
+  const handleNoButtonDodge = (e?: React.MouseEvent | React.TouchEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    const maxX = 140;
+    const maxY = 110;
+    const newX = (Math.random() > 0.5 ? 1 : -1) * (Math.random() * (maxX - 40) + 40);
+    const newY = (Math.random() > 0.5 ? 1 : -1) * (Math.random() * (maxY - 30) + 30);
+    setNoPosition({ x: newX, y: newY });
+    setNoAttempts(prev => prev + 1);
+  };
+
+  const playfulNoTexts = [
+    'NO',
+    'Nahi? Soch lo! 😉',
+    'Arre aise kaise? 🙈',
+    'Pakad ke dikhao! 🏃‍♂️',
+    'Itni jaldi nahi! ❤️',
+    'Ek baar aur socho! 😂',
+    'Chalo maan jao na! 🥺',
+    'Nahi dabne dunga! 😜'
+  ];
+
   // Admin Logout: completely resets admin credentials, sensitive memory data, and returns to Login or public
   const handleAdminLogout = async () => {
     if (adminToken) {
@@ -273,16 +342,13 @@ export default function App() {
               whileTap={{ scale: 0.9 }}
               onClick={() => {
                 if (currentView === 'admin-dashboard') {
+                  handleAdminLogout();
                   setCurrentView('experience');
                 } else if (currentView === 'admin-login') {
                   setCurrentView('experience');
                 } else {
-                  // Always open Admin Login (never bypasses login)
-                  if (adminToken) {
-                    setCurrentView('admin-dashboard');
-                  } else {
-                    setCurrentView('admin-login');
-                  }
+                  // Always open fresh login
+                  setCurrentView('admin-login');
                 }
               }}
               title="Admin Menu"
@@ -313,7 +379,10 @@ export default function App() {
             token={adminToken || ''}
             adminUsername={adminUsername}
             onLogout={handleAdminLogout}
-            onBackToWebsite={() => setCurrentView('experience')}
+            onBackToWebsite={async () => {
+              await handleAdminLogout();
+              setCurrentView('experience');
+            }}
           />
         ) : (
           /* Scenes 1 through 10 Container */
@@ -457,28 +526,28 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* 3 Approved Options */}
+                  {/* 3 Options */}
                   <div className="space-y-3 mb-6">
                     {[
                       {
                         key: 'Haan, bana li hai! 👻',
-                        label: 'Haan, bana li hai! 👻',
-                        followUpText: 'Arre waah! Apna Snapchat ID batao phir 😉'
+                        label: 'Haan, bana li hai! 👻'
                       },
                       {
-                        key: 'Bana to li hai, par zyada use nahi karti 🌸',
-                        label: 'Bana to li hai, par zyada use nahi karti 🌸',
-                        followUpText: 'Chalo koi nahi, ID share karogi? 😊'
+                        key: 'Main nahi bana rahi hoon! 🙅‍♀️',
+                        label: 'Main nahi bana rahi hoon! 🙅‍♀️'
                       },
                       {
-                        key: 'Nahi, abhi tak nahi banayi! 🙅‍♀️',
-                        label: 'Nahi, abhi tak nahi banayi! 🙅‍♀️',
-                        followUpText: 'Koi baat nahi, bina Snapchat ke bhi tum sabse best ho! ❤️'
+                        key: 'Abhi nahi banayi hai, par bana lungi 😊',
+                        label: 'Abhi nahi banayi hai, par bana lungi 😊'
                       }
                     ].map(opt => (
                       <div
                         key={opt.key}
-                        onClick={() => setSnapchatOption(opt.key)}
+                        onClick={() => {
+                          setSnapchatOption(opt.key);
+                          setSnapchatFollowUpAnswer('');
+                        }}
                         className={`p-4 rounded-2xl border transition-all cursor-pointer ${
                           snapchatOption === opt.key
                             ? 'bg-rose-500/20 border-rose-400 text-rose-100 shadow-md'
@@ -508,22 +577,86 @@ export default function App() {
                       animate={{ opacity: 1, height: 'auto' }}
                       className="mb-6 pt-4 border-t border-rose-500/20"
                     >
-                      {snapchatOption === 'Nahi, abhi tak nahi banayi! 🙅‍♀️' ? (
-                        <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-200 text-xs text-center font-medium">
-                          Koi baat nahi, bina Snapchat ke bhi tum sabse best ho! ❤️
-                        </div>
-                      ) : (
+                      {/* Follow-up for Option 1: Haan, bana li hai */}
+                      {snapchatOption === 'Haan, bana li hai! 👻' && (
                         <div>
                           <label className="block text-xs font-medium text-rose-300 mb-1.5">
-                            {snapchatOption === 'Haan, bana li hai! 👻'
-                              ? 'Arre waah! Apna Snapchat ID batao phir 😉'
-                              : 'Chalo koi nahi, ID share karogi? 😊'}
+                            Arre waah! Apna Snapchat ID batao phir 😉
                           </label>
                           <input
                             type="text"
                             value={snapchatIdInput}
                             onChange={e => setSnapchatIdInput(e.target.value)}
                             placeholder="@your_snapchat_id (optional)"
+                            className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-rose-500/30 text-rose-100 text-sm focus:outline-none focus:border-rose-400"
+                          />
+                        </div>
+                      )}
+
+                      {/* Follow-up for Option 2: Main nahi bana rahi hoon */}
+                      {snapchatOption === 'Main nahi bana rahi hoon! 🙅‍♀️' && (
+                        <div>
+                          <p className="text-xs md:text-sm font-medium text-rose-200 mb-3">
+                            Aisa mat bolo na, sach mein nahi banaogi? 🥺
+                          </p>
+
+                          <div className="relative flex items-center justify-start gap-3 min-h-[55px]">
+                            {/* Option to agree */}
+                            <motion.button
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              type="button"
+                              onClick={() => setSnapchatFollowUpAnswer('Achha baba, bana lungi ❤️')}
+                              className={`px-4 py-2.5 rounded-xl text-xs font-medium transition-all cursor-pointer border ${
+                                snapchatFollowUpAnswer === 'Achha baba, bana lungi ❤️'
+                                  ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white border-rose-400 shadow-md'
+                                  : 'bg-rose-500/20 hover:bg-rose-500/30 text-rose-200 border-rose-500/40'
+                              }`}
+                            >
+                              Achha baba, bana lungi ❤️
+                            </motion.button>
+
+                            {/* Playful Jumping NAHI Button */}
+                            <motion.button
+                              type="button"
+                              animate={{
+                                x: snapNoPosition.x,
+                                y: snapNoPosition.y,
+                                rotate: snapNoAttempts ? (snapNoAttempts % 2 === 0 ? 5 : -5) : 0
+                              }}
+                              transition={{ type: 'spring', stiffness: 500, damping: 22 }}
+                              onMouseEnter={handleSnapNoDodge}
+                              onClick={handleSnapNoDodge}
+                              onTouchStart={handleSnapNoDodge}
+                              className="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-rose-200 border border-rose-500/30 text-xs font-medium cursor-pointer transition-colors shadow-lg z-20 whitespace-nowrap"
+                            >
+                              {snapPlayfulTexts[Math.min(snapNoAttempts, snapPlayfulTexts.length - 1)]}
+                            </motion.button>
+                          </div>
+
+                          {snapchatFollowUpAnswer && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 5 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-200 text-xs text-center font-medium mt-3"
+                            >
+                              Hehe, I knew it! Chalo ID baad mein le lunga 😉❤️
+                            </motion.div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Follow-up for Option 3: Abhi nahi banayi hai, par bana lungi */}
+                      {snapchatOption === 'Abhi nahi banayi hai, par bana lungi 😊' && (
+                        <div>
+                          <label className="block text-xs md:text-sm font-medium text-rose-200 mb-2 leading-relaxed">
+                            Achha ji? Kab banaogi... jab tumhari shaadi ho jayegi tab kya? 😂😜
+                          </label>
+                          <input
+                            type="text"
+                            value={snapchatFollowUpAnswer}
+                            onChange={e => setSnapchatFollowUpAnswer(e.target.value)}
+                            placeholder="Yahan batao kab banaogi... 😉"
                             className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-rose-500/30 text-rose-100 text-sm focus:outline-none focus:border-rose-400"
                           />
                         </div>
@@ -780,29 +913,65 @@ export default function App() {
                     Kya tum meri zindagi ka ek khaas hissa banna pasand karogi? ❤️
                   </h2>
 
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-sm mx-auto">
+                  <div className="relative flex flex-col sm:flex-row items-center justify-center gap-4 max-w-sm mx-auto min-h-[140px]">
                     {/* YES BUTTON */}
                     <motion.button
                       whileHover={{ scale: 1.08 }}
                       whileTap={{ scale: 0.95 }}
                       onClick={() => handleProposalAnswer('YES')}
                       disabled={isSaving}
-                      className="w-full sm:w-1/2 py-4 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-400 hover:to-pink-400 text-white font-bold text-lg shadow-xl shadow-rose-500/40 border border-rose-300/40 cursor-pointer"
+                      className="w-full sm:w-1/2 py-4 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-400 hover:to-pink-400 text-white font-bold text-lg shadow-xl shadow-rose-500/40 border border-rose-300/40 cursor-pointer z-10"
                     >
                       YES ❤️
                     </motion.button>
 
-                    {/* NO BUTTON (Functional and respected, never forced!) */}
+                    {/* PLAYFUL JUMPING NO BUTTON */}
                     <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => handleProposalAnswer('NO')}
+                      animate={{
+                        x: noPosition.x,
+                        y: noPosition.y,
+                        rotate: noAttempts ? (noAttempts % 2 === 0 ? 6 : -6) : 0
+                      }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 22 }}
+                      onMouseEnter={handleNoButtonDodge}
+                      onClick={handleNoButtonDodge}
+                      onTouchStart={handleNoButtonDodge}
                       disabled={isSaving}
-                      className="w-full sm:w-1/2 py-4 rounded-2xl bg-white/10 hover:bg-white/20 text-rose-200 font-medium text-base border border-rose-500/30 cursor-pointer transition-colors"
+                      className="w-full sm:w-1/2 py-4 rounded-2xl bg-white/10 hover:bg-white/20 text-rose-200 font-medium text-base border border-rose-500/30 cursor-pointer transition-colors shadow-lg z-20 whitespace-nowrap px-4"
                     >
-                      NO
+                      {playfulNoTexts[Math.min(noAttempts, playfulNoTexts.length - 1)]}
                     </motion.button>
                   </div>
+
+                  {/* Playful hint or confirmation if attempted multiple times */}
+                  {noAttempts > 0 && noAttempts < 6 && (
+                    <motion.p
+                      key={noAttempts}
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-xs text-rose-300/70 mt-4 italic"
+                    >
+                      {noAttempts === 1 && "Hehe pakad ke dikhao! 😜"}
+                      {noAttempts === 2 && "NO bolna itna aasaan thodi hai! ❤️"}
+                      {noAttempts === 3 && "Maan jao na, YES bolo! ✨"}
+                      {noAttempts >= 4 && "Dil se poochho, YES hi aayega! 😉"}
+                    </motion.p>
+                  )}
+
+                  {noAttempts >= 6 && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-6 text-center"
+                    >
+                      <button
+                        onClick={() => handleProposalAnswer('NO')}
+                        className="text-xs text-rose-300/40 hover:text-rose-200 underline transition-colors cursor-pointer"
+                      >
+                        Agar sach mein 'NO' kehna hai, toh yahan click karein
+                      </button>
+                    </motion.div>
+                  )}
                 </motion.div>
               )}
 

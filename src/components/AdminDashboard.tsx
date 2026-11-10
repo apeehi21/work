@@ -190,7 +190,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <motion.button
             whileHover={{ scale: 1.05, x: -3 }}
             whileTap={{ scale: 0.95 }}
-            onClick={onBackToWebsite}
+            onClick={() => {
+              onLogout();
+              onBackToWebsite();
+            }}
             className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/15 text-rose-200 text-xs border border-rose-500/30 transition-all cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
