@@ -1,0 +1,6 @@
+{
+  "name": "ehehehe",
+  "description": "A romantic interactive experience with heartfelt memories, shayari, proposal, keepsake letter, and memories album.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

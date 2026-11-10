@@ -1,0 +1,86 @@
+{
+  "entities": {
+    "Visitor": {
+      "title": "Visitor",
+      "description": "A single visitor session tracking answers throughout the romantic experience",
+      "type": "object",
+      "properties": {
+        "visitorId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "visitorName": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "snapchatAnswer": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "snapchatId": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "memoryAnswer": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "memoryFollowUp": {
+          "type": "string",
+          "maxLength": 1000
+        },
+        "personalMessage": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "finalAnswer": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "completionStatus": {
+          "type": "string",
+          "enum": ["in_progress", "completed", "declined"]
+        }
+      },
+      "required": ["visitorId", "visitorName", "createdAt", "updatedAt", "completionStatus"]
+    },
+    "AdminConfig": {
+      "title": "AdminConfig",
+      "description": "Administrator identity document",
+      "type": "object",
+      "properties": {
+        "adminId": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "username": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["adminId", "username"]
+    }
+  },
+  "firestore": {
+    "/visitors/{visitorId}": {
+      "schema": "Visitor",
+      "description": "Collection of romantic session visitor records"
+    },
+    "/admins/{adminId}": {
+      "schema": "AdminConfig",
+      "description": "Designated administrator identity documents"
+    }
+  }
+}

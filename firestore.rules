@@ -1,0 +1,75 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Connection testing endpoint
+    match /test/{testId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function isValidVisitor(data) {
+      return data.visitorId is string && data.visitorId.size() > 0 && data.visitorId.size() <= 128
+        && data.visitorName is string && data.visitorName.size() > 0 && data.visitorName.size() <= 100
+        && (!('snapchatAnswer' in data) || (data.snapchatAnswer is string && data.snapchatAnswer.size() <= 200))
+        && (!('snapchatId' in data) || data.snapchatId == null || (data.snapchatId is string && data.snapchatId.size() <= 100))
+        && (!('memoryAnswer' in data) || (data.memoryAnswer is string && data.memoryAnswer.size() <= 200))
+        && (!('memoryFollowUp' in data) || (data.memoryFollowUp is string && data.memoryFollowUp.size() <= 1000))
+        && (!('personalMessage' in data) || (data.personalMessage is string && data.personalMessage.size() <= 2000))
+        && (!('finalAnswer' in data) || data.finalAnswer == null || (data.finalAnswer is string && (data.finalAnswer == 'YES' || data.finalAnswer == 'NO')))
+        && (data.completionStatus in ['in_progress', 'completed', 'declined']);
+    }
+
+    match /visitors/{visitorId} {
+      allow get: if isAdmin();
+      allow list: if isAdmin();
+
+      allow create: if isValidId(visitorId)
+        && incoming().visitorId == visitorId
+        && isValidVisitor(incoming());
+
+      allow update: if isValidId(visitorId)
+        && incoming().visitorId == visitorId
+        && incoming().visitorId == existing().visitorId
+        && isValidVisitor(incoming())
+        && (
+          isAdmin() ||
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'snapchatAnswer', 'snapchatId', 'memoryAnswer', 'memoryFollowUp',
+            'personalMessage', 'finalAnswer', 'completionStatus', 'updatedAt'
+          ])
+        );
+
+      allow delete: if isAdmin();
+    }
+
+    match /admins/{adminId} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
