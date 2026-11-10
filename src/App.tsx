@@ -1032,10 +1032,8 @@ export default function App() {
         )}
       </main>
 
-      {/* Subtle Bottom Footer */}
-      <footer className="relative z-20 py-4 px-4 text-center text-[11px] text-rose-300/40">
-        <p>Made with love • ehehehe ❤️</p>
-      </footer>
+      {/* Bottom spacing */}
+      <div className="py-2" />
     </div>
   );
 }
