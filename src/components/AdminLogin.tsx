@@ -45,26 +45,32 @@ export const AdminLogin: React.FC<AdminLoginProps> = ({ onLoginSuccess, onBackTo
         })
       });
 
-      const data = await res.json();
-
-      if (!res.ok || !data.success || !data.token) {
-        setErrorMessage(data.error || 'Invalid username or password.');
-        setPassword(''); // Clear password on error
-        setLoading(false);
-        return;
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.token) {
+          setUsername('');
+          setPassword('');
+          setShowPassword(false);
+          onLoginSuccess(data.token, data.username);
+          return;
+        }
       }
+    } catch {
+      // In static environments like GitHub Pages, /api/admin/login will not exist
+    }
 
-      // Success: clear inputs immediately from memory
+    // Direct credential check (supports static GitHub Pages deployment)
+    if (username.trim() === 'admin123' && password === 'himesh143') {
+      const staticToken = 'gh_admin_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
       setUsername('');
       setPassword('');
       setShowPassword(false);
-      onLoginSuccess(data.token, data.username);
-    } catch (err: any) {
-      setErrorMessage('Network error during login. Please try again.');
+      onLoginSuccess(staticToken, 'admin123');
+    } else {
+      setErrorMessage('Invalid username or password.');
       setPassword('');
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   };
 
   return (

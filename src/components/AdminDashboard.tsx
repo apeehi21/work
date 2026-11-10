@@ -19,6 +19,8 @@ import {
   X
 } from 'lucide-react';
 import type { VisitorRecord } from '../../server/adminService.ts';
+import { collection, getDocs, doc, deleteDoc } from 'firebase/firestore';
+import { db } from '../firebase.ts';
 
 interface AdminDashboardProps {
   token: string;
@@ -49,6 +51,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     setLoading(true);
     setError(null);
 
+    // 1. Try server API
     try {
       const res = await fetch('/api/admin/visitors', {
         headers: {
@@ -58,19 +61,46 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       });
 
       if (res.status === 401) {
-        // Token expired or invalid -> force logout and wipe memory
         onLogout();
         return;
       }
 
-      const data = await res.json();
-      if (res.ok && data.visitors) {
-        setVisitors(data.visitors);
-      } else {
-        setError(data.error || 'Failed to fetch visitors.');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.visitors) {
+          setVisitors(data.visitors);
+          setLoading(false);
+          return;
+        }
       }
+    } catch {
+      // Static deployment fallback (GitHub Pages)
+    }
+
+    // 2. Direct Cloud Firestore query fallback for static hosting
+    try {
+      const snapshot = await getDocs(collection(db, 'visitors'));
+      const list: VisitorRecord[] = [];
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        list.push({
+          visitorId: data.visitorId || docSnap.id,
+          visitorName: data.visitorName || 'Unknown',
+          snapchatAnswer: data.snapchatAnswer,
+          snapchatId: data.snapchatId,
+          memoryAnswer: data.memoryAnswer,
+          memoryFollowUp: data.memoryFollowUp,
+          personalMessage: data.personalMessage,
+          finalAnswer: data.finalAnswer,
+          completionStatus: data.completionStatus || 'in_progress',
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : (data.createdAt || new Date().toISOString()),
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : (data.updatedAt || new Date().toISOString())
+        });
+      });
+      list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      setVisitors(list);
     } catch (err: any) {
-      setError('Network failure while fetching visitor data.');
+      setError('Could not retrieve visitors from Firestore.');
     } finally {
       setLoading(false);
     }
@@ -97,6 +127,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         if (selectedVisitor?.visitorId === visitorId) {
           setSelectedVisitor(null);
         }
+        setDeletingId(null);
+        return;
+      }
+    } catch {
+      // Fallback to Firestore deleteDoc for static deployments
+    }
+
+    try {
+      await deleteDoc(doc(db, 'visitors', visitorId));
+      setVisitors(prev => prev.filter(v => v.visitorId !== visitorId));
+      if (selectedVisitor?.visitorId === visitorId) {
+        setSelectedVisitor(null);
       }
     } catch {
       alert('Failed to delete visitor record.');

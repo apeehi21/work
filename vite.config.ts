@@ -6,6 +6,7 @@ import {adminApiPlugin} from './server/apiPlugin.ts';
 
 export default defineConfig(() => {
   return {
+    base: './',
     plugins: [react(), tailwindcss(), adminApiPlugin()],
     resolve: {
       alias: {

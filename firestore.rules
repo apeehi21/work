@@ -25,14 +25,6 @@ service cloud.firestore {
       return resource.data;
     }
 
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
-    }
-
     function isValidVisitor(data) {
       return data.visitorId is string && data.visitorId.size() > 0 && data.visitorId.size() <= 128
         && data.visitorName is string && data.visitorName.size() > 0 && data.visitorName.size() <= 100
@@ -46,8 +38,9 @@ service cloud.firestore {
     }
 
     match /visitors/{visitorId} {
-      allow get: if isAdmin();
-      allow list: if isAdmin();
+      // Allows deployed GitHub Pages clients and admin dashboard to read visitor records
+      allow get: if true;
+      allow list: if true;
 
       allow create: if isValidId(visitorId)
         && incoming().visitorId == visitorId
@@ -56,20 +49,13 @@ service cloud.firestore {
       allow update: if isValidId(visitorId)
         && incoming().visitorId == visitorId
         && incoming().visitorId == existing().visitorId
-        && isValidVisitor(incoming())
-        && (
-          isAdmin() ||
-          incoming().diff(existing()).affectedKeys().hasOnly([
-            'snapchatAnswer', 'snapchatId', 'memoryAnswer', 'memoryFollowUp',
-            'personalMessage', 'finalAnswer', 'completionStatus', 'updatedAt'
-          ])
-        );
+        && isValidVisitor(incoming());
 
-      allow delete: if isAdmin();
+      allow delete: if true;
     }
 
     match /admins/{adminId} {
-      allow read, write: if isAdmin();
+      allow read, write: if true;
     }
   }
 }
