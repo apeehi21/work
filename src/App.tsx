@@ -145,20 +145,45 @@ export default function App() {
     setScene(4);
   };
 
+  // Validation helpers for advancing through scenes
+  const isNameValid = () => nameInput.trim().length > 0;
+
+  const isSnapchatValid = () => {
+    if (!snapchatOption) return false;
+    if (snapchatOption === 'Haan, bana li hai! 👻') {
+      return snapchatIdInput.trim().length > 0;
+    }
+    if (snapchatOption === 'Main nahi bana rahi hoon! 🙅‍♀️') {
+      return snapchatFollowUpAnswer.trim().length > 0;
+    }
+    if (snapchatOption === 'Abhi nahi banayi hai, par bana lungi 😊') {
+      return snapchatFollowUpAnswer.trim().length > 0;
+    }
+    return false;
+  };
+
+  const isMemoryValid = () => {
+    return Boolean(memoryOption && memoryFollowUpInput.trim().length > 0);
+  };
+
+  const isMessageValid = () => {
+    return personalMessageInput.trim().length > 0;
+  };
+
   // Scene 4: Snapchat Submit
   const handleSnapchatSubmit = async () => {
-    if (!snapchatOption) return;
+    if (!isSnapchatValid()) return;
     setIsSaving(true);
 
     let submittedId: string | null = null;
     let recordedAnswer = snapchatOption;
 
     if (snapchatOption === 'Haan, bana li hai! 👻') {
-      submittedId = snapchatIdInput.trim() || null;
+      submittedId = snapchatIdInput.trim();
     } else if (snapchatOption === 'Main nahi bana rahi hoon! 🙅‍♀️') {
-      recordedAnswer = `${snapchatOption} (Follow-up: ${snapchatFollowUpAnswer || 'Maan gayi!'})`;
+      recordedAnswer = `${snapchatOption} (Jawab: ${snapchatFollowUpAnswer.trim()})`;
     } else if (snapchatOption === 'Abhi nahi banayi hai, par bana lungi 😊') {
-      recordedAnswer = `${snapchatOption} (Kab banaogi: ${snapchatFollowUpAnswer.trim() || 'Jaldi hi!'})`;
+      recordedAnswer = `${snapchatOption} (Kab banaogi: ${snapchatFollowUpAnswer.trim()})`;
     }
 
     try {
@@ -183,14 +208,14 @@ export default function App() {
 
   // Scene 6: Memory Submit
   const handleMemorySubmit = async () => {
-    if (!memoryOption) return;
+    if (!isMemoryValid()) return;
     setIsSaving(true);
 
     try {
       await updateVisitorStep(visitorId, {
         visitorName,
         memoryAnswer: memoryOption,
-        memoryFollowUp: memoryFollowUpInput.trim() || undefined
+        memoryFollowUp: memoryFollowUpInput.trim()
       });
     } catch (err) {
       console.error('Error saving memory answer:', err);
@@ -203,12 +228,13 @@ export default function App() {
 
   // Scene 7: Personal Message Submit
   const handleMessageSubmit = async () => {
+    if (!isMessageValid()) return;
     setIsSaving(true);
 
     try {
       await updateVisitorStep(visitorId, {
         visitorName,
-        personalMessage: personalMessageInput.trim() || undefined
+        personalMessage: personalMessageInput.trim()
       });
     } catch (err) {
       console.error('Error saving personal message:', err);
@@ -430,15 +456,20 @@ export default function App() {
                     </div>
 
                     <motion.button
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.97 }}
+                      whileHover={isNameValid() ? { scale: 1.03 } : {}}
+                      whileTap={isNameValid() ? { scale: 0.97 } : {}}
                       type="submit"
-                      disabled={isSaving}
-                      className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 hover:from-rose-400 hover:to-pink-500 text-white font-medium shadow-xl shadow-rose-950/60 flex items-center justify-center gap-2 transition-all cursor-pointer text-base"
+                      disabled={isSaving || !isNameValid()}
+                      className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 via-pink-500 to-rose-600 hover:from-rose-400 hover:to-pink-500 text-white font-medium shadow-xl shadow-rose-950/60 flex items-center justify-center gap-2 transition-all text-base cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
                     >
                       <span>Aage badho ✨</span>
                       <ArrowRight className="w-4 h-4" />
                     </motion.button>
+                    {!isNameValid() && (
+                      <p className="text-xs text-rose-300/60 text-center mt-2">
+                        Pehle apna pyara sa naam likho tabhi aage ja sakte ho ❤️
+                      </p>
+                    )}
                   </form>
                 </motion.div>
               )}
@@ -581,14 +612,14 @@ export default function App() {
                       {snapchatOption === 'Haan, bana li hai! 👻' && (
                         <div>
                           <label className="block text-xs font-medium text-rose-300 mb-1.5">
-                            Arre waah! Apna Snapchat ID batao phir 😉
+                            Arre waah! Apna Snapchat ID batao phir 😉 <span className="text-rose-400 font-bold ml-1">*</span>
                           </label>
                           <input
                             type="text"
                             value={snapchatIdInput}
                             onChange={e => setSnapchatIdInput(e.target.value)}
-                            placeholder="@your_snapchat_id (optional)"
-                            className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-rose-500/30 text-rose-100 text-sm focus:outline-none focus:border-rose-400"
+                            placeholder="Yahan apna Snapchat username / ID likho..."
+                            className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-rose-500/30 text-rose-100 text-sm focus:outline-none focus:border-rose-400 placeholder-rose-300/30"
                           />
                         </div>
                       )}
@@ -600,7 +631,7 @@ export default function App() {
                             Aisa mat bolo na, sach mein nahi banaogi? 🥺
                           </p>
 
-                          <div className="relative flex items-center justify-start gap-3 min-h-[55px]">
+                          <div className="relative flex items-center justify-start gap-3 min-h-[55px] mb-3">
                             {/* Option to agree */}
                             <motion.button
                               whileHover={{ scale: 1.05 }}
@@ -634,7 +665,20 @@ export default function App() {
                             </motion.button>
                           </div>
 
-                          {snapchatFollowUpAnswer && (
+                          <div className="mt-2">
+                            <label className="block text-xs font-medium text-rose-300 mb-1.5">
+                              Kyun nahi bana rahi? Sach-sach wajah yahan likho... 🥺✍️ <span className="text-rose-400 font-bold ml-1">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={snapchatFollowUpAnswer}
+                              onChange={e => setSnapchatFollowUpAnswer(e.target.value)}
+                              placeholder="Apni wajah yahan likho (ya upar button daba kar haan bolo)..."
+                              className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-rose-500/30 text-rose-100 text-sm focus:outline-none focus:border-rose-400 placeholder-rose-300/30"
+                            />
+                          </div>
+
+                          {snapchatFollowUpAnswer === 'Achha baba, bana lungi ❤️' && (
                             <motion.div
                               initial={{ opacity: 0, y: 5 }}
                               animate={{ opacity: 1, y: 0 }}
@@ -650,14 +694,14 @@ export default function App() {
                       {snapchatOption === 'Abhi nahi banayi hai, par bana lungi 😊' && (
                         <div>
                           <label className="block text-xs md:text-sm font-medium text-rose-200 mb-2 leading-relaxed">
-                            Achha ji? Kab banaogi... jab tumhari shaadi ho jayegi tab kya? 😂😜
+                            Achha ji? Kab banaogi... jab tumhari shaadi ho jayegi tab kya? 😂😜 <span className="text-rose-400 font-bold ml-1">*</span>
                           </label>
                           <input
                             type="text"
                             value={snapchatFollowUpAnswer}
                             onChange={e => setSnapchatFollowUpAnswer(e.target.value)}
-                            placeholder="Yahan batao kab banaogi... 😉"
-                            className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-rose-500/30 text-rose-100 text-sm focus:outline-none focus:border-rose-400"
+                            placeholder="Yahan batao kab banaogi... 😉 (likhna zaroori hai)"
+                            className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-rose-500/30 text-rose-100 text-sm focus:outline-none focus:border-rose-400 placeholder-rose-300/30"
                           />
                         </div>
                       )}
@@ -665,15 +709,26 @@ export default function App() {
                   )}
 
                   <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    disabled={!snapchatOption || isSaving}
+                    whileHover={isSnapchatValid() ? { scale: 1.02 } : {}}
+                    whileTap={isSnapchatValid() ? { scale: 0.98 } : {}}
+                    disabled={!isSnapchatValid() || isSaving}
                     onClick={handleSnapchatSubmit}
-                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-medium text-sm shadow-xl shadow-rose-950/60 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-medium text-sm shadow-xl shadow-rose-950/60 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transition-all"
                   >
                     <span>Aage Chalo ✨</span>
                     <ArrowRight className="w-4 h-4" />
                   </motion.button>
+                  {!isSnapchatValid() && (
+                    <p className="text-xs text-rose-300/70 text-center mt-2.5 font-medium">
+                      {!snapchatOption
+                        ? '👆 Pehle upar option chuno aur type karo tabhi aage ja sakte ho'
+                        : snapchatOption === 'Haan, bana li hai! 👻'
+                        ? '✍️ Aage badhne ke liye apna Snapchat ID likhna zaroori hai'
+                        : snapchatOption === 'Main nahi bana rahi hoon! 🙅‍♀️'
+                        ? '✍️ Aage badhne ke liye wajah likho ya button dabao'
+                        : '✍️ Aage badhne ke liye batao kab banaogi'}
+                    </p>
+                  )}
                 </motion.div>
               )}
 
@@ -824,27 +879,35 @@ export default function App() {
                           : memoryOption === 'Nahi, yaad nahi hai.'
                           ? 'Koi baat nahi, kya tumhe koi chhoti si baat yaad hai?'
                           : 'Achha, phir tumhe sabse pehle kya yaad aata hai?'}
+                        <span className="text-rose-400 font-bold ml-1">*</span>
                       </label>
                       <input
                         type="text"
                         value={memoryFollowUpInput}
                         onChange={e => setMemoryFollowUpInput(e.target.value)}
-                        placeholder="Yahan likho..."
-                        className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-rose-500/30 text-rose-100 text-sm focus:outline-none focus:border-rose-400"
+                        placeholder="Yahan likhna zaroori hai..."
+                        className="w-full px-4 py-2.5 rounded-xl bg-black/40 border border-rose-500/30 text-rose-100 text-sm focus:outline-none focus:border-rose-400 placeholder-rose-300/30"
                       />
                     </motion.div>
                   )}
 
                   <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    disabled={!memoryOption || isSaving}
+                    whileHover={isMemoryValid() ? { scale: 1.02 } : {}}
+                    whileTap={isMemoryValid() ? { scale: 0.98 } : {}}
+                    disabled={!isMemoryValid() || isSaving}
                     onClick={handleMemorySubmit}
-                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-medium text-sm shadow-xl shadow-rose-950/60 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-medium text-sm shadow-xl shadow-rose-950/60 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transition-all"
                   >
                     <span>Aage Badho ✨</span>
                     <ArrowRight className="w-4 h-4" />
                   </motion.button>
+                  {!isMemoryValid() && (
+                    <p className="text-xs text-rose-300/70 text-center mt-2.5 font-medium">
+                      {!memoryOption
+                        ? '👆 Pehle upar option chuno aur type karo tabhi aage ja sakte ho'
+                        : '✍️ Box mein kuch likhna zaroori hai tabhi aage ja sakte ho ❤️'}
+                    </p>
+                  )}
                 </motion.div>
               )}
 
@@ -867,7 +930,7 @@ export default function App() {
                         Achha, ab tum bhi kuch bolo... ❤️
                       </h2>
                       <p className="text-xs text-rose-200/60">
-                        Jo bhi dil mein ho, khulkar likho!
+                        Jo bhi dil mein ho, khulkar likho! <span className="text-rose-400 font-bold">*</span>
                       </p>
                     </div>
                   </div>
@@ -877,21 +940,26 @@ export default function App() {
                       rows={4}
                       value={personalMessageInput}
                       onChange={e => setPersonalMessageInput(e.target.value)}
-                      placeholder="Dil ki baat yahan likho..."
+                      placeholder="Dil ki baat yahan likho... (likhna zaroori hai ❤️)"
                       className="w-full p-4 rounded-2xl bg-black/40 border border-rose-500/30 text-rose-100 text-sm focus:outline-none focus:border-rose-400 placeholder-rose-300/30 resize-none font-romantic text-lg"
                     />
                   </div>
 
                   <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    disabled={isSaving}
+                    whileHover={isMessageValid() ? { scale: 1.02 } : {}}
+                    whileTap={isMessageValid() ? { scale: 0.98 } : {}}
+                    disabled={!isMessageValid() || isSaving}
                     onClick={handleMessageSubmit}
-                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-medium text-sm shadow-xl shadow-rose-950/60 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 text-white font-medium text-sm shadow-xl shadow-rose-950/60 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none transition-all"
                   >
                     <span>Sabse Khaas Baat Dekho ❤️</span>
                     <ArrowRight className="w-4 h-4" />
                   </motion.button>
+                  {!isMessageValid() && (
+                    <p className="text-xs text-rose-300/70 text-center mt-2.5 font-medium">
+                      ✍️ Message box mein kuch likhna zaroori hai tabhi aage ja sakte ho ❤️
+                    </p>
+                  )}
                 </motion.div>
               )}
 
